@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.SignalR;
+using PokerBackend.Enums;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,6 +14,8 @@ namespace PokerBackend.Models
         public int? Seat { get; set; }
         public double Chips { get; set; }
         public Card[] Hand { get; set; }
+        public PlayerActions CurrentAction { get; set; }
+        public double CurrentBet { get; set; }
 
         public Player(string username, string connectionId)
         {

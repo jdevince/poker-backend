@@ -89,6 +89,11 @@ namespace PokerBackend.Services
             }
         }
 
+        public IEnumerable<Player> GetSeatedPlayers(Game game)
+        {
+            return game.Players.Where(x => x.Seat != null).OrderBy(x => x.Seat);
+        }
+
         public Player GetCurrentPlayer(string connectionId)
         {
             foreach (Game game in Games)
@@ -142,6 +147,83 @@ namespace PokerBackend.Services
             Card card = deck[index];
             deck.RemoveAt(index);
             return card;
+        }
+
+        public void ResetForBidding(Game game)
+        {
+            IEnumerable<Player> seatedPlayers = GetSeatedPlayers(game);
+
+            foreach (Player player in seatedPlayers)
+            {
+                player.CurrentAction = PlayerActions.None;
+                player.CurrentBet = 0;
+            }
+        }
+
+        public bool IsBiddingOver(Game game)
+        {
+            IEnumerable<Player> seatedPlayers = GetSeatedPlayers(game);
+            IEnumerable<Player> nonFoldedPlayers = seatedPlayers.Where(x => x.CurrentAction != PlayerActions.Fold);
+
+            if (nonFoldedPlayers.Count() == 1)
+            {
+                return true;
+            }
+            else if (nonFoldedPlayers.All(x => x.CurrentAction == PlayerActions.Check))
+            {
+                return true;
+            }
+            else if (nonFoldedPlayers.All(x => x.CurrentAction != PlayerActions.None) 
+                        && nonFoldedPlayers.All(x => x.CurrentBet == GetHighestBet(game)))
+            {
+                return true;
+            }
+
+            return false;
+        }
+
+        public Player GetNextPlayerToTakeAction(Game game)
+        {
+            int seat = game.DealerSeat; //Start looking left of dealer
+            for (int i = 0; i < Game.MAX_SEATS; i++) //Loop through all seats
+            {
+                seat = GetNextSeat(seat);
+                Player player = game.Players.FirstOrDefault(x => x.Seat == seat);
+
+                if (player != null)
+                {
+                    if (player.CurrentAction != PlayerActions.Fold)
+                    {
+                        continue;
+                    }
+                    else if (player.CurrentAction == PlayerActions.None
+                               || player.CurrentBet < GetHighestBet(game))
+                    {
+                        return player;
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        private int GetNextSeat(int seat)
+        {
+            if (seat == Game.MAX_SEATS - 1)
+            {
+                return 0;
+            }
+            else
+            {
+                return seat + 1;
+            }
+        }
+
+        public double GetHighestBet(Game game)
+        {
+            IEnumerable<Player> players = GetSeatedPlayers(game);
+            double result = players.OrderByDescending(x => x.CurrentBet).FirstOrDefault().CurrentBet;
+            return result;
         }
     }
 }
